@@ -67,6 +67,7 @@ PARAMS = {
     "ir_tunnel_d": 6.8,
     "ir_tunnel_len": 8.0,
 }
+MODEL_NAME = "zero2w_billboard_case"
 
 
 def _pi_hole_points(p):
@@ -296,14 +297,27 @@ def make_stand_assembly(p=PARAMS):
     return asm, body, lid
 
 
-def export_all(prefix="zero2w_billboard_case", p=PARAMS, output_dir="exports"):
+def build_model(p=PARAMS):
     asm, body, lid = make_stand_assembly(p)
+    return {
+        "name": MODEL_NAME,
+        "assembly": asm,
+        "parts": {
+            "body": body,
+            "lid": lid,
+        },
+    }
+
+
+def export_all(prefix="zero2w_billboard_case", p=PARAMS, output_dir="exports"):
+    model = build_model(p)
+    asm = model["assembly"]
+    parts = model["parts"]
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
-    exporters.export(body, str(out / f"{prefix}_body.stl"))
-    exporters.export(lid, str(out / f"{prefix}_lid.stl"))
-    exporters.export(body, str(out / f"{prefix}_body.step"))
-    exporters.export(lid, str(out / f"{prefix}_lid.step"))
+    for part_name, shape in parts.items():
+        exporters.export(shape, str(out / f"{prefix}_{part_name}.stl"))
+        exporters.export(shape, str(out / f"{prefix}_{part_name}.step"))
     try:
         asm.save(str(out / f"{prefix}.step"))
     except Exception:

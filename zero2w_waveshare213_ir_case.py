@@ -86,6 +86,7 @@ PARAMS = {
     "vent_pitch_x": 7.0,
     "vent_pitch_y": 5.0,
 }
+MODEL_NAME = "zero2w_waveshare213_ir_case"
 
 
 def _case_outer_size(p):
@@ -335,14 +336,27 @@ def build_assembly(p=PARAMS):
     return asm, base, lid
 
 
-def export_all(prefix="zero2w_waveshare213_ir_case", p=PARAMS, output_dir="exports"):
+def build_model(p=PARAMS):
     asm, base, lid = build_assembly(p)
+    return {
+        "name": MODEL_NAME,
+        "assembly": asm,
+        "parts": {
+            "base": base,
+            "lid": lid,
+        },
+    }
+
+
+def export_all(prefix="zero2w_waveshare213_ir_case", p=PARAMS, output_dir="exports"):
+    model = build_model(p)
+    asm = model["assembly"]
+    parts = model["parts"]
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
-    exporters.export(base, str(out / f"{prefix}_base.stl"))
-    exporters.export(lid, str(out / f"{prefix}_lid.stl"))
-    exporters.export(base, str(out / f"{prefix}_base.step"))
-    exporters.export(lid, str(out / f"{prefix}_lid.step"))
+    for part_name, shape in parts.items():
+        exporters.export(shape, str(out / f"{prefix}_{part_name}.stl"))
+        exporters.export(shape, str(out / f"{prefix}_{part_name}.step"))
     # CadQuery versions differ on assembly export APIs. Keep part exports
     # deterministic, and export assembly only when supported.
     try:

@@ -7,6 +7,8 @@ import json
 import sys
 from pathlib import Path
 
+from cadquery import exporters
+
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -18,6 +20,10 @@ def load_overrides(path: Path) -> dict:
     if not isinstance(data, dict):
         raise ValueError("params JSON must be an object")
     return data
+
+
+def load_model_module(name: str):
+    return importlib.import_module(name)
 
 
 def merged_params(model_module, overrides: dict | None) -> dict:
@@ -32,38 +38,53 @@ def merged_params(model_module, overrides: dict | None) -> dict:
     return params
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Check model connectivity/validity")
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Unified exporter for CadQuery models")
     parser.add_argument(
         "--model",
         required=True,
         help="Python module name (e.g. zero2w_waveshare213_ir_case)",
     )
+    parser.add_argument("--prefix", help="output filename prefix")
     parser.add_argument("--params", type=Path, help="JSON file for PARAMS overrides")
+    parser.add_argument("--out", type=Path, default=ROOT / "exports")
     args = parser.parse_args()
-    model_module = importlib.import_module(args.model)
+
+    model_module = load_model_module(args.model)
     if not hasattr(model_module, "build_model"):
         raise ValueError(f"Model module '{args.model}' must define build_model(p=PARAMS)")
+    prefix = args.prefix or getattr(model_module, "MODEL_NAME", args.model)
+
     overrides = load_overrides(args.params) if args.params else None
     params = merged_params(model_module, overrides)
+    args.out.mkdir(parents=True, exist_ok=True)
+    before = {p.name for p in args.out.glob(f"{prefix}*")}
     model = model_module.build_model(p=params)
-
-    model_name = model.get("name", args.model)
     parts = model.get("parts")
+    asm = model.get("assembly")
     if not isinstance(parts, dict) or not parts:
         raise ValueError("build_model() must return a non-empty 'parts' dict")
 
-    print(f"[{model_name}]")
-    all_ok = True
-    for part_name, part in parts.items():
-        solid_count = part.solids().size()
-        is_valid = part.val().isValid()
-        print(f"{part_name} solids: {solid_count}")
-        print(f"{part_name} isValid: {is_valid}")
-        all_ok = all_ok and solid_count == 1 and is_valid
-    print(f"PASS: {all_ok}")
-    return 0 if all_ok else 1
+    for part_name, shape in parts.items():
+        exporters.export(shape, str(args.out / f"{prefix}_{part_name}.stl"))
+        exporters.export(shape, str(args.out / f"{prefix}_{part_name}.step"))
+    if asm is not None:
+        try:
+            asm.save(str(args.out / f"{prefix}.step"))
+        except Exception:
+            pass
+    after = {p.name for p in args.out.glob(f"{prefix}*")}
+    created = sorted(after - before)
+
+    print("Export complete:")
+    if created:
+        for name in created:
+            print(f"  - {args.out / name}")
+    else:
+        for path in sorted(args.out.glob(f"{prefix}*")):
+            if path.is_file():
+                print(f"  - {path}")
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

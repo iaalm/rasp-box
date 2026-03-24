@@ -1,0 +1,67 @@
+---
+description: CadQuery modeling and repo conventions for rasp-box
+alwaysApply: true
+---
+
+# CadQuery Project Conventions
+
+## Repository Layout
+
+- Keep reusable model definitions in root `*.py` model files.
+- Keep generic CLI utilities in `scripts/` (export/check helpers).
+- Write generated outputs only to `exports/` (do not write exports to project root).
+- Do not add model-specific scripts under `scripts/`; scripts must work from passed parameters.
+
+## Model Interface Contract
+
+- Every model module must define:
+  - `PARAMS` (dict of default dimensions/options)
+  - `MODEL_NAME` (stable model identifier string)
+  - `build_model(p=PARAMS)` returning a dict with:
+    - `name`: model name
+    - `assembly`: CadQuery assembly (or `None`)
+    - `parts`: non-empty dict mapping `part_name -> cadquery shape`
+- Keep part naming stable (`body`, `base`, `lid`, `rear_cover`, etc.) to avoid downstream script breakage.
+- Avoid script-specific assumptions inside model modules; scripts consume only the standard `build_model()` output.
+
+## Modeling Rules
+
+- Any printable part (`body`, `base`, `lid`) must be a single solid.
+- Prefer overlapping geometry (not only touching faces) when uniting parts.
+- For structural joins, add explicit bridges/ribs so boolean unions remain connected.
+- Keep key dimensions in `PARAMS` and avoid hard-coded magic numbers in assembly placement.
+
+## Validation Workflow
+
+- After substantial geometry edits, always run:
+  - `./.venv311/bin/python scripts/check_connectivity.py --model <python_module_name>`
+- Before commits that touch model geometry or export logic, rerun:
+  - `./.venv311/bin/python scripts/check_connectivity.py --model <python_module_name>`
+- If multiple models are affected, run the check once per affected model.
+- Only treat a model as valid when both conditions hold:
+  - `solids == 1` for each printable part
+  - `isValid == True`
+- If the check fails, fix connectivity first; do not export or commit as final.
+- This requirement applies to every printable output file in this repo (existing and new models): every part must satisfy `solids == 1` and `isValid == True`.
+
+## Export Workflow
+
+- Use script entrypoints, not ad-hoc exporter commands:
+  - `./.venv311/bin/python scripts/export_model.py --model <python_module_name>`
+- Always run connectivity checks before export; never treat multi-solid output as acceptable.
+- Keep export paths configurable via `--out` and default to `exports/`.
+- Prefer script-level generic export logic driven by `build_model()` output; avoid per-model branching in scripts.
+
+## Script CLI Consistency
+
+- Keep `scripts/check_connectivity.py` and `scripts/export_model.py` parameter conventions aligned:
+  - `--model <python_module_name>` identifies the model module to import.
+  - `--params <json_path>` applies validated PARAMS overrides.
+- `check_connectivity.py` must not write CAD files; it is validation-only.
+- `export_model.py` must write outputs only to the configured `--out` directory (default `exports/`).
+- When adding new shared CLI behaviors, apply them to both scripts when meaningful and document them in `README.md`.
+
+## Git Hygiene
+
+- Never commit virtual environments or generated CAD outputs.
+- Keep `.gitignore` aligned with `.venv*`, `__pycache__`, and `exports/`.
