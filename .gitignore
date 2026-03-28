@@ -6,5 +6,8 @@ __pycache__/
 # Generated CAD outputs
 exports/
 
+# Diagnostic renders
+renders/
+
 # macOS
 .DS_Store

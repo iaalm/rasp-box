@@ -10,6 +10,7 @@ alwaysApply: true
 - Keep reusable model definitions in root `*.py` model files.
 - Keep generic CLI utilities in `scripts/` (export/check helpers).
 - Write generated outputs only to `exports/` (do not write exports to project root).
+- Diagnostic renders go to `renders/` (not committed).
 - Do not add model-specific scripts under `scripts/`; scripts must work from passed parameters.
 
 ## Model Interface Contract
@@ -30,38 +31,60 @@ alwaysApply: true
 - Prefer overlapping geometry (not only touching faces) when uniting parts.
 - For structural joins, add explicit bridges/ribs so boolean unions remain connected.
 - Keep key dimensions in `PARAMS` and avoid hard-coded magic numbers in assembly placement.
+- Build incrementally: start with the basic shell, verify, then add features one at a time. Verify after each addition.
+- Add 0.05–0.1 mm overlap on cutting tools to ensure clean boolean cuts.
+
+## LLM Modeling Guidance
+
+- **Never trust LLM memory for hardware dimensions.** Always look up official mechanical drawings / datasheets (use WebFetch) before coding port positions, mounting holes, or connector sizes.
+- **Spatial reasoning is error-prone.** Explicitly annotate coordinate systems: which axis points which direction, which face is front/back/top/bottom. ASCII diagrams in code comments help.
+- **Common spatial mistakes:** features on the wrong face, protrusions pointing inward instead of outward, "near" vs "far" swapped. After writing geometry, render and cross-section to catch these.
 
 ## Validation Workflow
 
 - After substantial geometry edits, always run:
-  - `./.venv311/bin/python scripts/check_connectivity.py --model <python_module_name>`
-- Before commits that touch model geometry or export logic, rerun:
-  - `./.venv311/bin/python scripts/check_connectivity.py --model <python_module_name>`
+  - `./.venv311/bin/python scripts/check_connectivity.py --model <module>`
+  - Use `--verbose` for extended diagnostics (topology, bbox, volume, watertight).
+- Before commits that touch model geometry or export logic, rerun the check.
 - If multiple models are affected, run the check once per affected model.
 - Only treat a model as valid when both conditions hold:
   - `solids == 1` for each printable part
   - `isValid == True`
 - If the check fails, fix connectivity first; do not export or commit as final.
-- This requirement applies to every printable output file in this repo (existing and new models): every part must satisfy `solids == 1` and `isValid == True`.
+- **Visual inspection** — after validation passes, render and inspect:
+  - `./.venv311/bin/python scripts/render_model.py --model <module>`
+  - `./.venv311/bin/python scripts/cross_section.py --model <module> --plane Z=<value>`
+  - Check: features in correct positions, holes on correct faces, overall shape matches intent.
+  - Cross-section at each major feature height to verify wall thickness and internal structure.
+
+## Print-Readiness Checklist
+
+Before delivering STL files, verify:
+- BRepCheck valid, watertight (1 shell per solid).
+- No thin walls (< 0.8 mm for FDM).
+- Overhangs < 45° or supported.
+- Screw holes have enough surrounding material.
+- Tolerances added for mating parts (+0.2–0.3 mm per side).
 
 ## Export Workflow
 
 - Use script entrypoints, not ad-hoc exporter commands:
-  - `./.venv311/bin/python scripts/export_model.py --model <python_module_name>`
+  - `./.venv311/bin/python scripts/export_model.py --model <module>`
 - Always run connectivity checks before export; never treat multi-solid output as acceptable.
 - Keep export paths configurable via `--out` and default to `exports/`.
 - Prefer script-level generic export logic driven by `build_model()` output; avoid per-model branching in scripts.
 
 ## Script CLI Consistency
 
-- Keep `scripts/check_connectivity.py` and `scripts/export_model.py` parameter conventions aligned:
+- All scripts under `scripts/` share these conventions where applicable:
   - `--model <python_module_name>` identifies the model module to import.
   - `--params <json_path>` applies validated PARAMS overrides.
+  - `--part <name>` operates on a single part.
 - `check_connectivity.py` must not write CAD files; it is validation-only.
 - `export_model.py` must write outputs only to the configured `--out` directory (default `exports/`).
-- When adding new shared CLI behaviors, apply them to both scripts when meaningful and document them in `README.md`.
+- `render_model.py` and `cross_section.py` accept `--model` or `--file` for input, output to `--out` (default `renders/`).
 
 ## Git Hygiene
 
 - Never commit virtual environments or generated CAD outputs.
-- Keep `.gitignore` aligned with `.venv*`, `__pycache__`, and `exports/`.
+- Keep `.gitignore` aligned with `.venv*`, `__pycache__`, `exports/`, and `renders/`.
