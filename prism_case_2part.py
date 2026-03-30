@@ -57,12 +57,12 @@ from prism_case import build_prism_unsplit_shell
 # ============================================================
 
 PARAMS = {
-    "SIDE": 50.0,       # 正三角形边长
-    "LENGTH": 70.0,     # 棱柱长度
+    "SIDE": 65.0,       # 正三角形边长
+    "LENGTH": 76.0,     # 棱柱长度
     "WALL": 3.0,        # 壁厚
     "OPENING_L": 60.0,  # 长边 (沿棱柱长度方向), 居中
     "OPENING_W": 30.0,  # 短边 (沿三角形边方向)
-    "OPENING_SHORT_OFFSET": 5.0,  # 短边起始偏移
+    "OPENING_SHORT_OFFSET": 8.0,  # 短边起始偏移
     "OUTER_DEPTH": 1.0,
     "INNER_OPENING_W": 32.0,
     "INNER_OPENING_L": 66.0,
@@ -78,7 +78,7 @@ PARAMS = {
     "HOLE_SPACING_LONG": 58.0,
     "FILLET_R": 0.25,
     "TAB_THICK": 8.0,
-    "TAB_ARM": 1.0,
+    "TAB_ARM": 2.0,
     "TAB_ANCHOR": 4.0,
 }
 

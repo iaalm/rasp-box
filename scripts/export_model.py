@@ -48,6 +48,11 @@ def main() -> None:
     parser.add_argument("--prefix", help="output filename prefix")
     parser.add_argument("--params", type=Path, help="JSON file for PARAMS overrides")
     parser.add_argument("--out", type=Path, default=ROOT / "exports")
+    parser.add_argument(
+        "--formats",
+        default="stl,step,3mf",
+        help="Comma-separated formats to export for each part (default: stl,step,3mf)",
+    )
     args = parser.parse_args()
 
     model_module = load_model_module(args.model)
@@ -65,9 +70,23 @@ def main() -> None:
     if not isinstance(parts, dict) or not parts:
         raise ValueError("build_model() must return a non-empty 'parts' dict")
 
+    fmt_list = [s.strip().lower() for s in str(args.formats).split(",") if s.strip()]
+    allowed = {"stl", "step", "3mf"}
+    unknown = sorted(set(fmt_list) - allowed)
+    if unknown:
+        raise ValueError(f"Unknown formats: {', '.join(unknown)} (allowed: stl, step, 3mf)")
+
     for part_name, shape in parts.items():
-        exporters.export(shape, str(args.out / f"{prefix}_{part_name}.stl"))
-        exporters.export(shape, str(args.out / f"{prefix}_{part_name}.step"))
+        for fmt in fmt_list:
+            ext = "step" if fmt == "step" else fmt
+            out_path = args.out / f"{prefix}_{part_name}.{ext}"
+            try:
+                exporters.export(shape, str(out_path))
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to export '{part_name}' as {fmt.upper()} to '{out_path}'. "
+                    f"This usually means your CadQuery/OCCT build doesn't support that exporter."
+                ) from e
     if asm is not None:
         try:
             asm.save(str(args.out / f"{prefix}.step"))
