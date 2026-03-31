@@ -76,6 +76,8 @@ PARAMS = {
     "NARROW_PROTRUDE": 3.0,
     "NARROW_ANCHOR": 1.0,
     "FILLET_R": 0.25,
+    "HOLE_OFFSET_SHORT": 6.0,
+    "HOLE_OFFSET_LONG": 0.0
 }
 
 MODEL_NAME = "prism_case"
@@ -108,6 +110,8 @@ def build_prism_unsplit_shell(
     HOLE_D = p["HOLE_D"]
     HOLE_SPACING_SHORT = p["HOLE_SPACING_SHORT"]
     HOLE_SPACING_LONG = p["HOLE_SPACING_LONG"]
+    HOLE_OFFSET_SHORT = p["HOLE_OFFSET_SHORT"]
+    HOLE_OFFSET_LONG = p["HOLE_OFFSET_LONG"]
     if fillet_r is None:
         fillet_r = p["FILLET_R"]
 
@@ -292,8 +296,8 @@ def build_prism_unsplit_shell(
 
     # 4 个孔位
     hole_positions = []
-    for edge_off in [-HOLE_SPACING_SHORT / 2, HOLE_SPACING_SHORT / 2]:
-        for z_off in [-HOLE_SPACING_LONG / 2, HOLE_SPACING_LONG / 2]:
+    for edge_off in [-HOLE_SPACING_SHORT / 2 + HOLE_OFFSET_SHORT, HOLE_SPACING_SHORT / 2 + HOLE_OFFSET_SHORT]:
+        for z_off in [-HOLE_SPACING_LONG / 2 + HOLE_OFFSET_LONG, HOLE_SPACING_LONG / 2 + HOLE_OFFSET_LONG]:
             hx = face_cx + edge_off * edge_dx
             hy = face_cy + edge_off * edge_dy
             hz = face_cz + z_off
