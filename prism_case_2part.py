@@ -78,7 +78,7 @@ PARAMS = {
     "HOLE_SPACING_LONG": 58.0,
     "FILLET_R": 0.25,
     "TAB_THICK": 8.0,
-    "TAB_ARM": 4.0,
+    "TAB_ARM": 3.0,
     "TAB_ANCHOR": 4.0,
     "HOLE_OFFSET_SHORT": 6.0,
     "HOLE_OFFSET_LONG": -2.0,
