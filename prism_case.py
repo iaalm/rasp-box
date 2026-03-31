@@ -77,7 +77,7 @@ PARAMS = {
     "NARROW_ANCHOR": 1.0,
     "FILLET_R": 0.25,
     "HOLE_OFFSET_SHORT": 6.0,
-    "HOLE_OFFSET_LONG": 0.0
+    "HOLE_OFFSET_LONG": -2.0
 }
 
 MODEL_NAME = "prism_case"

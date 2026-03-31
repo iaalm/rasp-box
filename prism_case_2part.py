@@ -81,7 +81,7 @@ PARAMS = {
     "TAB_ARM": 2.0,
     "TAB_ANCHOR": 4.0,
     "HOLE_OFFSET_SHORT": 6.0,
-    "HOLE_OFFSET_LONG": 0.0,
+    "HOLE_OFFSET_LONG": -2.0,
 }
 
 MODEL_NAME = "prism_case_2part"
