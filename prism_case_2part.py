@@ -78,10 +78,15 @@ PARAMS = {
     "HOLE_SPACING_LONG": 58.0,
     "FILLET_R": 0.25,
     "TAB_THICK": 8.0,
-    "TAB_ARM": 2.0,
+    "TAB_ARM": 4.0,
     "TAB_ANCHOR": 4.0,
     "HOLE_OFFSET_SHORT": 6.0,
     "HOLE_OFFSET_LONG": -2.0,
+    # micro USB 开孔 (左斜面)
+    "USB_SLOT_W": 12.0,     # 开孔宽度, 沿 Z 轴方向
+    "USB_SLOT_H": 6.0,      # 开孔高度, 沿左斜面斜向
+    "USB_FLOOR_DIST": 5.0,  # 孔中心距内底板距离 (内侧测量)
+    "USB_SCREW_DIST": 8.0,  # 孔中心与最近螺丝孔中心的 Z 向距离
 }
 
 MODEL_NAME = "prism_case_2part"

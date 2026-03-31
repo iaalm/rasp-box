@@ -77,7 +77,12 @@ PARAMS = {
     "NARROW_ANCHOR": 1.0,
     "FILLET_R": 0.25,
     "HOLE_OFFSET_SHORT": 6.0,
-    "HOLE_OFFSET_LONG": -2.0
+    "HOLE_OFFSET_LONG": -2.0,
+    # micro USB 开孔 (左斜面)
+    "USB_SLOT_W": 12.0,     # 开孔宽度, 沿 Z 轴方向
+    "USB_SLOT_H": 6.0,      # 开孔高度, 沿左斜面斜向
+    "USB_FLOOR_DIST": 5.0,  # 孔中心距内底板距离 (内侧测量)
+    "USB_SCREW_DIST": 8.0,  # 孔中心与最近螺丝孔中心的 Z 向距离
 }
 
 MODEL_NAME = "prism_case"
@@ -112,6 +117,10 @@ def build_prism_unsplit_shell(
     HOLE_SPACING_LONG = p["HOLE_SPACING_LONG"]
     HOLE_OFFSET_SHORT = p["HOLE_OFFSET_SHORT"]
     HOLE_OFFSET_LONG = p["HOLE_OFFSET_LONG"]
+    USB_SLOT_W = p.get("USB_SLOT_W", 12.0)
+    USB_SLOT_H = p.get("USB_SLOT_H", 6.0)
+    USB_FLOOR_DIST = p.get("USB_FLOOR_DIST", 5.0)
+    USB_SCREW_DIST = p.get("USB_SCREW_DIST", 8.0)
     if fillet_r is None:
         fillet_r = p["FILLET_R"]
 
@@ -321,6 +330,49 @@ def build_prism_unsplit_shell(
             .extrude(-(WALL + 2))      # 向内
         )
         result = result.cut(hole_cyl).cut(hole_cyl2)
+
+    # ============================================================
+    # 左斜面 Micro USB 开孔
+    # ============================================================
+    # 左斜面: 从 (-SIDE/2, 0) 到 (0, TRI_H)
+    #   法线 (外向): (-TRI_H/SIDE, 0.5, 0)
+    #   斜面方向 (向上): (0.5, TRI_H/SIDE, 0)
+    #
+    # Pi Zero W 的 USB 口在板子长边侧面朝向左斜面。
+    # USB 口靠近板子的 Z 小端 (low-Z 端盖侧), 因此参考 Z 小端螺丝 (Z=4)
+    # 向外偏移 USB_SCREW_DIST = 8mm → Z = 4 + 8 = 12mm
+    #
+    # 孔中心坐标:
+    #   Y_abs = WALL + USB_FLOOR_DIST  (内底往上 USB_FLOOR_DIST mm)
+    #   Z     = 小端螺丝 Z + USB_SCREW_DIST
+    #   X     = −SIDE/2 × (1 − Y/TRI_H)  (沿左斜面线性插值)
+    #
+    # 工作平面 xDir = Z轴 → rect(USB_SLOT_W, USB_SLOT_H) 为
+    #   USB_SLOT_W mm 沿 Z 轴 × USB_SLOT_H mm 沿斜面上坡方向
+
+    # 靠 Z 小端的螺丝 Z 坐标
+    nearest_screw_z = face_cz + (-HOLE_SPACING_LONG / 2 + HOLE_OFFSET_LONG)  # = 4 mm
+
+    usb_y = TRI_H - (WALL + USB_FLOOR_DIST) * math.sqrt(3) / 2.0                  # = 8 mm (绝对 Y)
+    usb_z = nearest_screw_z + USB_SCREW_DIST        # = 12 mm
+    # 左斜面: 从 (-SIDE/2, 0) 到 (0, TRI_H), X = -SIDE/2 × (1 − Y/TRI_H)
+    usb_x = -(WALL + USB_FLOOR_DIST) / 2.0      # ≈ −20.4 mm
+
+    left_norm = Vector(-0.5, TRI_H / SIDE, 0)       # 左斜面外向法线
+    usb_plane = Plane(
+        origin=Vector(usb_x, usb_y, usb_z),
+        normal=left_norm,
+        xDir=Vector(0, 0, 1),                        # Z 轴为面内 x 方向
+    )
+
+    # 双向挤出确保穿透壁厚
+    for sign in [1, -1]:
+        usb_slot = (
+            cq.Workplane(usb_plane)
+            .rect(USB_SLOT_W, USB_SLOT_H)
+            .extrude(sign * (WALL + 2) * 2)
+        )
+        result = result.cut(usb_slot)
 
     return result
 
